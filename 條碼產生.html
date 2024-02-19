@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Barcode Generator</title>
+    <style>
+        .barcode-container {
+            display: flex;
+            flex-direction: column;
+            gap: 1cm;
+            align-items: center;
+        }
+    </style>
+</head>
+<body>
+    <h2>Barcode Generator</h2>
+    <form id="barcodeForm">
+        <label for="firstBarcode">第一段條碼 (9碼):</label><br>
+        <input type="text" id="firstBarcode" name="firstBarcode" required><br>
+        <label for="secondBarcode">第二段條碼 (16碼):</label><br>
+        <input type="text" id="secondBarcode" name="secondBarcode" required><br>
+        <label for="paymentDue">繳費期限 (YYYMMDD):</label><br>
+        <input type="text" id="paymentDue" name="paymentDue" required><br>
+        <label for="paymentAmount">繳費金額:</label><br>
+        <input type="text" id="paymentAmount" name="paymentAmount" required><br><br>
+        <button type="button" onclick="generateBarcode()">生成條碼</button>
+    </form>
+
+    <div class="barcode-container">
+        <svg id="barcode1" width="400" height="100"></svg>
+        <svg id="barcode2" width="400" height="100"></svg>
+        <svg id="barcode3" width="400" height="100"></svg>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.0/dist/JsBarcode.all.min.js"></script>
+    <script>
+        function generateBarcode() {
+            // Get input values
+            var firstBarcode = document.getElementById("firstBarcode").value;
+            var secondBarcode = document.getElementById("secondBarcode").value;
+            var paymentDue = document.getElementById("paymentDue").value;
+            var paymentAmount = document.getElementById("paymentAmount").value;
+
+            // Convert letters to corresponding numbers
+            var convertedFirstBarcode = convertLettersToNumbers(firstBarcode);
+            var convertedSecondBarcode = convertLettersToNumbers(secondBarcode);
+
+            // Calculate checksums for the third barcode
+            var checksum3 = calculateChecksum(paymentDue.substring(1, 5) + paymentAmount.padStart(9, '0'));
+
+            // Construct the third barcode
+            var oddSum = calculateOddSum(convertedFirstBarcode) + calculateOddSum(convertedSecondBarcode) + calculateOddSum(paymentDue.substring(1, 5) + paymentAmount.padStart(9, '0'));
+            var evenSum = calculateEvenSum(convertedFirstBarcode) + calculateEvenSum(convertedSecondBarcode) + calculateEvenSum(paymentDue.substring(1, 5) + paymentAmount.padStart(9, '0'));
+            var oddChecksum = oddSum % 11 === 0 ? 'A' : oddSum % 11 === 10 ? 'Y' : oddSum % 11;
+            var evenChecksum = evenSum % 11 === 0 ? 'A' : evenSum % 11 === 10 ? 'Y' : evenSum % 11;
+            var thirdBarcode = paymentDue.substring(1, 5) + oddChecksum + evenChecksum + paymentAmount.padStart(9, '0');
+
+            // Display the barcodes
+            drawBarcode("barcode1", firstBarcode);
+            drawBarcode("barcode2", secondBarcode);
+            drawBarcode("barcode3", thirdBarcode);
+        }
+
+        function convertLettersToNumbers(text) {
+            var result = "";
+            for (var i = 0; i < text.length; i++) {
+                var char = text.charAt(i);
+                if (char >= 'A' && char <= 'Z') {
+                    // Convert letters to corresponding numbers
+                    result += convertLetterToNumber(char);
+                } else {
+                    result += char;
+                }
+            }
+            return result;
+        }
+
+        function convertLetterToNumber(letter) {
+            // Mapping table for letters to numbers
+            var mapping = {
+                'A': '1', 'B': '2', 'C': '3', 'D': '4', 'E': '5',
+                'F': '6', 'G': '7', 'H': '8', 'I': '9', 'J': '1',
+                'K': '2', 'L': '3', 'M': '4', 'N': '5', 'O': '6',
+                'P': '7', 'Q': '8', 'R': '9', 'S': '2', 'T': '3',
+                'U': '4', 'V': '5', 'W': '6', 'X': '7', 'Y': '8', 'Z': '9'
+            };
+            return mapping[letter];
+        }
+
+        function calculateChecksum(barcode) {
+            var sum = 0;
+            for (var i = 0; i < barcode.length; i++) {
+                sum += parseInt(barcode.charAt(i));
+            }
+            var checksum = sum % 11;
+            if (checksum === 0)
+                checksum = 'A';
+            else if (checksum === 10)
+                checksum = 'Y';
+            return checksum;
+        }
+
+        function calculateOddSum(barcode) {
+            var sum = 0;
+            for (var i = 0; i < barcode.length; i += 2) {
+                sum += parseInt(barcode.charAt(i));
+            }
+            return sum;
+        }
+
+        function calculateEvenSum(barcode) {
+            var sum = 0;
+            for (var i = 1; i < barcode.length; i += 2) {
+                sum += parseInt(barcode.charAt(i));
+            }
+            return sum;
+        }
+
+        function drawBarcode(svgId, barcode) {
+            JsBarcode("#" + svgId, barcode, {
+                format: "CODE39"
+            });
+        }
+    </script>
+</body>
+</html>
